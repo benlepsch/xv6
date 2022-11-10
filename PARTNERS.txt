@@ -1,0 +1,7 @@
+Ben Lepsch btl9zu
+Ben modified the scheduler to pick a random process weighted with the number of tickets.
+
+Ian Le iml7uk
+Ian wrote the settickets and getprocessinfo syscalls.
+
+We both assisted in debugging and testing the code as we implemented it

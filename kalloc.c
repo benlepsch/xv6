@@ -77,6 +77,29 @@ kfree(char *v)
     release(&kmem.lock);
 }
 
+int
+isphysicalpagefree(int ppn)
+{
+  struct run *vadr = P2V((uint)ppn);
+  struct run *r;
+
+  if(kmem.use_lock)
+    acquire(&kmem.lock);
+  r = kmem.freelist;
+
+  while (r) {
+    if ((int) r == (int) vadr) {
+      if(kmem.use_lock)
+        release(&kmem.lock);
+      return 1;
+    }
+    r = r->next;
+  }
+  if(kmem.use_lock)
+    release(&kmem.lock);
+  return 0;
+}
+
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns 0 if the memory cannot be allocated.

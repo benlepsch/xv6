@@ -6,6 +6,9 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "wpgdir.h"
+#include "kalloc.h"
+//#include "processesinfo.h"
 
 struct {
   struct spinlock lock;
@@ -19,6 +22,8 @@ extern void forkret(void);
 extern void trapret(void);
 
 static void wakeup1(void *chan);
+
+
 
 void
 pinit(void)
@@ -115,6 +120,82 @@ found:
   return p;
 }
 
+int
+getpagetableentry(int pid, int address) 
+{
+
+  struct proc *temp;
+  int found = 0;
+  for (temp = ptable.proc; temp < &ptable.proc[NPROC]; temp++) {
+    if (temp->pid == pid) {
+      found = 1;
+      break;
+    }
+  }
+
+  if (found == 0)
+    return -1;
+
+  pde_t *pdir = temp->pgdir;
+  pte_t *p = walkpgdir(pdir,(void*) address, 0);
+
+  if (p == 0x0)
+    return -1;
+  
+  return (int) *p;
+}
+
+void
+dumppagetable(int pid)
+{
+  struct proc *temp;
+  for (temp = ptable.proc; temp < &ptable.proc[NPROC]; temp++) {
+    if (temp->pid == pid) {
+      // temp = our process
+      pde_t *pdir = temp->pgdir;
+
+      cprintf("START PAGE TABLE (pid %d)\n", pid);
+
+      int addr = 0;// += x*4096
+      int c = 0;
+      do {
+        pte_t *p = walkpgdir(pdir, (void*)addr, 0);
+      
+        cprintf("%d P %s %s %x\n",
+            c,
+            *p & PTE_U ? "U" : "-",
+            *p & PTE_W ? "W" : "-",
+            PTE_ADDR(*p) >> PTXSHIFT
+        );
+
+        addr += PGSIZE;
+        c ++;
+      } while (addr < temp->sz);
+      
+
+      cprintf("END PAGE TABLE\n");
+      break;
+    }
+  }  
+}
+
+int
+getprocessesinfo(struct processes_info* p)
+{
+  p->num_processes = 0;
+
+  struct proc *proo;
+	for (proo = ptable.proc; proo < &ptable.proc[NPROC]; proo++) {
+		if (proo->state != UNUSED) {
+			p->times_scheduled[p->num_processes] = proo->times_scheduled;
+      p->tickets[p->num_processes] = proo->tickets;
+			p->pids[p->num_processes] = proo->pid;		
+			p->num_processes ++;
+		}
+	}
+  return 0;
+}
+
 //PAGEBREAK: 32
 // Set up first user process.
 void
@@ -124,7 +205,6 @@ userinit(void)
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
   p = allocproc();
-  
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
@@ -141,6 +221,7 @@ userinit(void)
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
+  //settickets(10);
 
   // this assignment to p->state lets other cores
   // run this process. the acquire forces the above
@@ -149,6 +230,7 @@ userinit(void)
   acquire(&ptable.lock);
 
   p->state = RUNNABLE;
+  p->tickets = 10;
 
   release(&ptable.lock);
 }
@@ -215,6 +297,7 @@ fork(void)
   acquire(&ptable.lock);
 
   np->state = RUNNABLE;
+  np->tickets = curproc->tickets;
 
   release(&ptable.lock);
 
@@ -311,6 +394,48 @@ wait(void)
   }
 }
 
+static unsigned random_seed = 1;
+
+#define RANDOM_MAX ((1u << 31u) - 1u)
+unsigned lcg_parkmiller(unsigned *state)
+{
+    const unsigned N = 0x7fffffff;
+    const unsigned G = 48271u;
+
+    /*  
+        Indirectly compute state*G%N.
+
+        Let:
+          div = state/(N/G)
+          rem = state%(N/G)
+
+        Then:
+          rem + div*(N/G) == state
+          rem*G + div*(N/G)*G == state*G
+
+        Now:
+          div*(N/G)*G == div*(N - N%G) === -div*(N%G)  (mod N)
+
+        Therefore:
+          rem*G - div*(N%G) === state*G  (mod N)
+
+        Add N if necessary so that the result is between 1 and N-1.
+    */
+    unsigned div = *state / (N / G);  /* max : 2,147,483,646 / 44,488 = 48,271 */
+    unsigned rem = *state % (N / G);  /* max : 2,147,483,646 % 44,488 = 44,487 */
+
+    unsigned a = rem * G;        /* max : 44,487 * 48,271 = 2,147,431,977 */
+    unsigned b = div * (N % G);  /* max : 48,271 * 3,399 = 164,073,129 */
+
+    return *state = (a > b) ? (a - b) : (a + (N - b));
+}
+
+unsigned next_random() {
+    return lcg_parkmiller(&random_seed);
+}
+
+
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -332,24 +457,38 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
+    int rand = (int) next_random();
+    int tickets = 0;
+
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+      tickets += p->tickets;
     }
+
+    if (tickets != 0)
+      rand = rand % tickets;
+
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->state != RUNNABLE)
+        continue;
+      if (rand < p->tickets) {
+        p->times_scheduled ++;
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+        c->proc = 0;
+        break;
+      } else {
+        rand -= p->tickets;
+      }
+    } 
+
     release(&ptable.lock);
 
   }

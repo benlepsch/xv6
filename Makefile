@@ -8,7 +8,7 @@ OBJS = \
 	ioapic.o\
 	kalloc.o\
 	kbd.o\
-        kshutdown.o\
+    kshutdown.o\
 	lapic.o\
 	log.o\
 	main.o\
@@ -189,8 +189,12 @@ UPROGS=\
 	_usertests\
 	_wc\
 	_zombie\
-        _shutdown\
-
+	_shutdown\
+	_twc\
+	_folgaremoga\
+	_processlist\
+	_timewithtickets\
+	_ptetool\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)

@@ -77,7 +77,7 @@ sys_read(void)
     return -1;
   return fileread(f, p, n);
 }
-
+int write_counter_= 0;
 int
 sys_write(void)
 {
@@ -87,6 +87,7 @@ sys_write(void)
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
     return -1;
+	write_counter_ = write_counter_ + 1;
   return filewrite(f, p, n);
 }
 
@@ -441,4 +442,19 @@ sys_pipe(void)
   fd[0] = fd0;
   fd[1] = fd1;
   return 0;
+}
+
+int
+sys_writecount(void)
+{
+	return write_counter_;
+}
+
+int
+sys_setwritecount(void)
+{
+	if (argint(0, &write_counter_) < 0) {
+		return -1;
+	}
+	return 0;
 }

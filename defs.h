@@ -1,3 +1,4 @@
+#include "processesinfo.h"
 #include "param.h"
 struct buf;
 struct context;
@@ -121,6 +122,7 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int 						getprocessesinfo(struct processes_info*);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

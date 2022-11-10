@@ -49,6 +49,10 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+	// for lottery scheduling
+	int tickets;								 // Number of tickets assigned to this process
+	int times_scheduled;				 // Number of times this process has been scheduled to run
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -56,3 +60,8 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+
+
+// shitter operating system doesn't even recognize these without including them in the header file 
+int getpagetableentry(int, int);
+void dumppagetable(int);

@@ -105,6 +105,13 @@ extern int sys_write(void);
 extern int sys_uptime(void);
 extern int sys_yield(void);
 extern int sys_shutdown(void);
+extern int sys_writecount(void);
+extern int sys_setwritecount(void);
+extern int sys_settickets(void);
+extern int sys_getprocessesinfo(void);
+extern int sys_getpagetableentry(void);
+extern int sys_isphysicalpagefree(void);
+extern int sys_dumppagetable(void);
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -130,6 +137,13 @@ static int (*syscalls[])(void) = {
 [SYS_close]   sys_close,
 [SYS_yield] sys_yield,
 [SYS_shutdown] sys_shutdown,
+[SYS_writecount] sys_writecount,
+[SYS_setwritecount] sys_setwritecount,
+[SYS_settickets] sys_settickets,
+[SYS_getprocessesinfo] sys_getprocessesinfo,
+[SYS_getpagetableentry] sys_getpagetableentry,
+[SYS_isphysicalpagefree] sys_isphysicalpagefree,
+[SYS_dumppagetable] sys_dumppagetable,
 };
 
 void
