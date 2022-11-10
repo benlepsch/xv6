@@ -77,7 +77,44 @@ trap(struct trapframe *tf)
             cpuid(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  case T_PGFLT:
+    //handle page fault
+    // get address it was trying to access
+    uint addr = rcr2();
 
+    // make sure it isnt user proceoss trying to access kernel memory
+    if ((addr >= KERNBASE) && !((myproc() == 0 || (tf->cs&3) == 0))) {
+      myproc()->killed = 1;
+      break;
+    }
+
+    // also make sure its not going beyond the max address in heap
+    if (V2P(addr) >= PHYSTOP) {
+      myproc()->killed = 1;
+      break;
+    }
+
+    // create new page table entry
+    struct proc *curproc = myproc();
+    pde_t *pgdir = curproc->pgdir;
+    
+    uint a = PGROUNDUP(addr);
+    
+    char *mem = kalloc();
+    if (mem == 0) {
+      cprintf("page fault out of memory\n");
+      deallocuvm(pgdir, addr + PGSIZE, addr);
+      break;
+    }
+    memset(mem, 0, PGSIZE);
+    if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
+      cprintf("page fault out of memory (2)\n");
+      deallocuvm(pgdir, addr + PGSIZE, addr);
+      kfree(mem);
+    }
+    // flush tlb
+    switchuvm(myproc());
+    break;
   //PAGEBREAK: 13
   default:
     if(myproc() == 0 || (tf->cs&3) == 0){

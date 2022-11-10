@@ -263,9 +263,21 @@ growproc(int n)
   struct proc *curproc = myproc();
 
   sz = curproc->sz;
-  if ((sz + n) >= KERNBASE)
+
+  // check if trying to access kernel memory
+  if ((sz + n) >= KERNBASE) 
     return -1;
   
+  // if we're deallocating memory, i think we do that here
+  // cause it wouldn't page fault to be deallocated otherwise
+  if (n < 0) {
+    if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
+      return -1;
+  }
+
+  curproc->sz = sz + n;
+  switchuvm(curproc);
+  return 0;
 }
 
 // Create a new process copying p as the parent.
