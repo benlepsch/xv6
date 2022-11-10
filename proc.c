@@ -240,20 +240,32 @@ userinit(void)
 int
 growproc(int n)
 {
+  // -------------------------------------------
+  // original function preserved in case we break it
+  // uint sz;
+  // struct proc *curproc = myproc();
+
+  // sz = curproc->sz;
+  // if(n > 0){
+  //   if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
+  //     return -1;
+  // } else if(n < 0){
+  //   if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
+  //     return -1;
+  // }
+  // curproc->sz = sz;
+  // switchuvm(curproc);
+  // return 0;
+  // -------------------------------------------
+  
+  // begin new code
   uint sz;
   struct proc *curproc = myproc();
 
   sz = curproc->sz;
-  if(n > 0){
-    if((sz = allocuvm(curproc->pgdir, sz, sz + n)) == 0)
-      return -1;
-  } else if(n < 0){
-    if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
-      return -1;
-  }
-  curproc->sz = sz;
-  switchuvm(curproc);
-  return 0;
+  if ((sz + n) >= KERNBASE)
+    return -1;
+  
 }
 
 // Create a new process copying p as the parent.
