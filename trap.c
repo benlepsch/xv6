@@ -84,7 +84,7 @@ trap(struct trapframe *tf)
     uint addr = rcr2();
 
     // make sure it isnt user proceoss trying to access kernel memory
-    if ((addr >= KERNBASE) && !((myproc() == 0 || (tf->cs&3) == 0))) {
+    if ((addr <= KERNBASE) && !((tf->cs&3) == 0)) {
       myproc()->killed = 1;
       break;
     }
