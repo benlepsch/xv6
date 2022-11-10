@@ -7,6 +7,7 @@
 #include "x86.h"
 #include "traps.h"
 #include "spinlock.h"
+#include "vm.h"
 
 // Interrupt descriptor table (shared by all CPUs).
 struct gatedesc idt[256];
@@ -89,7 +90,7 @@ trap(struct trapframe *tf)
     }
 
     // also make sure its not going beyond the max address in heap
-    if (V2P(addr) >= PHYSTOP) {
+    if (V2P((void*)addr) >= PHYSTOP) {
       myproc()->killed = 1;
       break;
     }
