@@ -123,7 +123,6 @@ found:
 int
 getpagetableentry(int pid, int address) 
 {
-
   struct proc *temp;
   int found = 0;
   for (temp = ptable.proc; temp < &ptable.proc[NPROC]; temp++) {
@@ -140,7 +139,7 @@ getpagetableentry(int pid, int address)
   pte_t *p = walkpgdir(pdir,(void*) address, 0);
 
   if (p == 0x0)
-    return -1;
+    return 0;
   
   return (int) *p;
 }
@@ -280,7 +279,10 @@ growproc(int n)
       return -1;
   }
 
-  curproc->sz = sz + n;
+  if (n >= 0)
+    curproc->sz = sz + n;
+  else
+    curproc->sz = sz;
   switchuvm(curproc);
   return 0;
 }

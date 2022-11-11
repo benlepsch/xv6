@@ -1,7 +1,10 @@
 Ben Lepsch btl9zu
-Ben modified the scheduler to pick a random process weighted with the number of tickets.
+For checkpoint one, ben wrote the dumppagetable function.
+for checkpoint two, ben modified the growproc() function and the copyuvm() function.
 
 Ian Le iml7uk
-Ian wrote the settickets and getprocessinfo syscalls.
+For checkpoint one, ian wrote the isphysicalpagefree and getpagetableentry functions.
+For checkpoint two, ian wrote the new page fault trap function.
 
-We both assisted in debugging and testing the code as we implemented it
+
+Throughout both checkpoints we both helped each other debug issues with the code.
