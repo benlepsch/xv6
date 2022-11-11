@@ -80,7 +80,7 @@ kfree(char *v)
 int
 isphysicalpagefree(int ppn)
 {
-  struct run *vadr = P2V((uint)ppn);
+  struct run *vadr = P2V(ppn << 12);
   struct run *r;
 
   if(kmem.use_lock)

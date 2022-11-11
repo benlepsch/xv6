@@ -84,33 +84,34 @@ trap(struct trapframe *tf)
     uint addr = rcr2();
 
     // make sure it isnt user proceoss trying to access kernel memory
-    if (((addr + PGSIZE) <= KERNBASE) && !((tf->cs&3) == 0)) {
-      myproc()->killed = 1;
-      break;
-    }
-
     // also make sure its not going beyond the max address in heap
-    if (V2P((void*)addr) >= PHYSTOP) {
+    if (addr >= myproc()->sz) {
       myproc()->killed = 1;
       break;
     }
+    uint a = PGROUNDDOWN(addr);
 
     // create new page table entry
     struct proc *curproc = myproc();
     pde_t *pgdir = curproc->pgdir;
-    
-    uint a = PGROUNDUP(addr);
+
+    // check if accessing guard page
+    pte_t *pte = walkpgdir(pgdir, (void*)a, 0);
+    if ((*pte & PTE_P) && !(*pte & PTE_U)) {
+      myproc()->killed = 1;
+      break;
+    }
     
     char *mem = kalloc();
     if (mem == 0) {
       cprintf("page fault out of memory\n");
-      deallocuvm(pgdir, addr + PGSIZE, addr);
+      myproc()->killed = 1;
       break;
     }
     memset(mem, 0, PGSIZE);
     if(mappages(pgdir, (char*)a, PGSIZE, V2P(mem), PTE_W|PTE_U) < 0){
       cprintf("page fault out of memory (2)\n");
-      deallocuvm(pgdir, addr + PGSIZE, addr);
+      myproc()->killed = 1;
       kfree(mem);
     }
     // flush tlb

@@ -268,6 +268,11 @@ growproc(int n)
   if ((sz + n) >= KERNBASE) 
     return -1;
   
+  // pte_t *p;
+
+  // if (sz + n) in guard page
+  // return -1
+  
   // if we're deallocating memory, i think we do that here
   // cause it wouldn't page fault to be deallocated otherwise
   if (n < 0) {
